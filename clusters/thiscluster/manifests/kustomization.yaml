@@ -3,7 +3,7 @@ kind: Kustomization
 resources:
 - applications.yaml
 - helmrelease-argocd.yaml
-- helmrelease-ingress-nginx.yam
+- helmrelease-ingress-nginx.yaml
 - helmrelease-metallb.yaml
 - helmrelease-monitoring.yaml
 - helmrepository.yaml
