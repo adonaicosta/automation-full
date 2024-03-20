@@ -66,3 +66,10 @@ flux bootstrap github \
 ```
 
 Add your new apps in clusters/thiscluster/apps in argocd Application Format or, add your apps in helmrelease format in manifests and add in kustomization.yaml file
+
+# Cleanup
+
+```
+kind delete cluster --name novo
+```
+
