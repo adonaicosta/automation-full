@@ -1,0 +1,278 @@
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: monitoring
+  namespace: flux-system
+spec:
+  chart:
+    spec:
+      chart: kube-prometheus-stack
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        name: prometheus-community
+      version: 51.5.1
+  install:
+    createNamespace: true
+    remediation:
+      retries: -1
+  interval: 1m0s
+  releaseName: monitoring
+  storageNamespace: monitoring
+  targetNamespace: monitoring
+  upgrade:
+    remediation:
+      retries: -1
+  values:
+    alertmanager:
+      ingress:
+        enabled: true
+        hosts:
+        - alertmanager.172.17.0.90.nip.io
+        ingressClassName: nginx
+        pathType: ImplementationSpecific
+        paths:
+        - /
+
+      config:
+        time_intervals:
+        - name: coml
+          time_intervals:
+          - times:
+            - start_time: "09:00"
+              end_time: "17:00"
+            weekdays: ["monday:friday"]
+        global:
+          resolve_timeout: 6h
+        receivers:
+        - name: blackhole
+        route:
+          receiver: blackhole
+          group_by: ['alertname', 'cluster_name']
+          group_wait: 15s
+          group_interval: 5m
+          repeat_interval: 3h
+          routes:
+          - continue: false
+            matchers:
+              - alertname =~ "Watchdog|InfoInhibitor"
+            receiver: blackhole
+          - continue: true
+            matchers:
+              - alertname =~ "CPUThrottlingHigh|KubeControllerManagerDown|KubeProxyDown|KubeSchedulerDown|TargetDown|KubeDeploymentReplicasMismatch|KubeHpaMaxedOut"
+              - namespace =~ "cert-manager|getup|ingress-.*|logging|monitoring|velero|.*-controllers|.*-ingress|.*istio.*|.*-operator|.*-provisioner|.*-system|argocd"
+            receiver: blackhole
+          - continue: true
+            matchers:
+              - alertname =~ ".*"
+
+    defaultRules:
+      rules:
+        kubeControllerManager: false
+        kubeProxy: false
+        kubeSchedulerAlerting: false
+        kubeSchedulerRecording: false
+        etcd: false
+
+    kubeApiServer:
+      enabled: true
+      serviceMonitor:
+        additionalLabels:
+          cluster: demo2
+
+    kube-state-metrics:
+      metricLabelsAllowlist:
+        - nodes=[role]
+      #extraArgs:
+      #- --metric-labels-allowlist=nodes=[role]
+
+
+    kubeEtcd:
+      enabled: false
+    kubeProxy:
+      enabled: false
+    kubeScheduler:
+      enabled: false
+    kubeControllerManager:
+      enabled: false
+
+    grafana:
+      serviceMonitor:
+        enabled: true
+        scrapeTimeout: 10s
+
+      adminPassword: admin
+      deploymentStrategy:
+        type: Recreate
+      additionalDataSources:
+      - name: Tempo
+        type: tempo
+        uid: tempo
+        editable: true
+        url: http://tempo:3100
+        basicAuth: false
+        access: proxy
+        isDefault: false
+        jsonData:
+          timeout: 60
+          httpMethod: GET
+          tracesToLogs:
+            datasourceUid: loki
+            spanStartTimeShift: '-15m'
+            spanEndTimeShift: '15m'
+            filterByTraceID: true
+            filterBySpanID: false
+            tags:
+            - cluster
+          tracesToMetrics:
+            datasourceUid: prometheus
+            tags:
+            - key: host.name
+              value: pod
+            spanStartTimeShift: '-15m'
+            spanEndTimeShift: '15m'
+            queries:
+            - name: 'Pod CPU'
+              query: 'sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{$$__tags, container!="POD"}) by (container)'
+            - name: 'Pod Memory'
+              query: 'sum(container_memory_working_set_bytes{$$__tags, job="kubelet", metrics_path="/metrics/cadvisor", container!="POD", image!=""}) by (container)'
+            - name: Req Duration Seconds (99p)
+              query: histogram_quantile(0.99, sum(rate(tns_request_duration_seconds_bucket{$$__tags}[1m]))
+                by (le))
+            - name: Req Duration Seconds (95p)
+              query: histogram_quantile(0.95, sum(rate(tns_request_duration_seconds_bucket{$$__tags}[1m]))
+                by (le))
+          serviceMap:
+            datasourceUid: prometheus
+          search:
+            hide: false
+          nodeGraph:
+            enabled: true
+          lokiSearch:
+            datasourceUid: loki
+      - access: proxy
+        basicAuth: false
+        isDefault: false
+        jsonData:
+          maxLines: 5000
+          manageAlerts: false
+          timeout: 60
+          derivedFields:
+          - datasourceUid: tempo
+            matcherRegex: "traceID=(\\w+)"
+            name: TraceID
+            url: "$${__value.raw}"
+        name: Loki
+        type: loki
+        uid: loki
+        url: http://loki.logging.svc:3100
+        editable: true
+      dashboardProviders:
+        dashboardproviders.yaml:
+          apiVersion: 1
+          providers:
+          - disableDeletion: false
+            editable: true
+            folder: ""
+            name: default
+            options:
+              path: /var/lib/grafana/dashboards/default
+            orgId: 1
+            type: file
+      dashboards:
+        default:
+          nginx:
+            datasource: Prometheus
+            gnetId: 9614
+            revision: 1
+      enabled: true
+      env:
+        GF_EXPLORE_ENABLED: "true"
+      forceDeployDatasources: true
+      grafana.ini:
+        #force_migration: true
+        auth:
+          #disable_login_form: true
+          #disable_signout_menu: true
+          disable_login_form: false
+          disable_signout_menu: false
+        auth.anonymous:
+          enabled: false
+          org_name: Main Org.
+          org_role: Admin
+        auth.basic:
+          enabled: true
+        feature_toggles:
+          traceToMetrics: true
+        server:
+          root_url: http://grafana.172.17.0.90.nip.io
+      imageRenderer:
+        enabled: false
+        env:
+          HTTP_HOST: 0.0.0.0
+          IGNORE_HTTPS_ERRORS: true
+          RENDERING_ARGS: --no-sandbox,--disable-gpu,--window-size=1280x758
+        grafanaProtocol: http
+        grafanaSubPath: ""
+        hostAliases: []
+        image:
+          pullPolicy: Always
+          repository: grafana/grafana-image-renderer
+          sha: ""
+          tag: latest
+        networkPolicy:
+          limitEgress: false
+          limitIngress: true
+        podPortName: http
+        priorityClassName: ""
+        replicas: 1
+        resources: {}
+        revisionHistoryLimit: 10
+        securityContext: {}
+        service:
+          enabled: true
+          port: 8081
+          portName: http
+          targetPort: 8081
+        serviceAccountName: ""
+      ingress:
+        enabled: true
+        hosts:
+        - grafana.172.17.0.90.nip.io
+        ingressClassName: nginx
+      plugins:
+      - camptocamp-prometheus-alertmanager-datasource
+      - grafana-clock-panel
+      - redis-datasource
+      sidecar:
+        dashboards:
+          enabled: true
+          searchNamespace: ALL
+        datasources:
+          enabled: true
+          searchNamespace: ALL
+          exemplarTraceIdDestinations:
+            datasourceUid: tempo
+            traceIdLabelName: traceID
+
+    prometheus:
+      ingress:
+        enabled: true
+        hosts:
+        - prometheus.172.17.0.90.nip.io
+        ingressClassName: nginx
+        pathType: ImplementationSpecific
+        paths:
+        - /
+      prometheusSpec:
+        enableRemoteWriteReceiver: true
+        enableFeatures:
+        - exemplar-storage
+        serviceMonitorSelectorNilUsesHelmValues: false
+        podMonitorSelectorNilUsesHelmValues: false
+        evaluationInterval: 10s
+        scrapeInterval: 10s
+        scrapeTimeout: 10s
+        externalLabels:
+          cluster: novo/cluster
+        prometheusExternalLabelName: cluster
