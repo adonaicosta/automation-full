@@ -39,13 +39,29 @@ git push -u origin main
 
 ```
 export GITHUB_TOKEN=<gh-token>
+```
 
+### Creating and install The Cluster
+
+```
+kind create cluster --name novo --config $PWD/kind.yml
+```
+
+# Accessing The Cluster
+
+```
+kubectl config use-context kind-novo
+```
+
+Change command below to your github repository name 
+
+```
 flux bootstrap github \
   --token-auth \
   --owner=my-github-username \
   --repository=my-repository-name \
   --branch=main \
-  --path=clusters/my-cluster \
+  --path=clusters/thiscluster \
   --personal
 ```
 
