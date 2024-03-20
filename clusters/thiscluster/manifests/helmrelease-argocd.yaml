@@ -22,7 +22,6 @@ spec:
       retries: -1
   interval: 5m
   dependsOn:
-  - name: ingress-nginx
   - name: monitoring
   releaseName: argocd
   storageNamespace: argocd
