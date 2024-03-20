@@ -67,6 +67,29 @@ flux bootstrap github \
 
 Add your new apps in clusters/thiscluster/apps in argocd Application Format or, add your apps in helmrelease format in manifests and add in kustomization.yaml file
 
+## Wait process and applications to be ready
+
+```
+watch kubectl get gitrepo,ks,hr -A
+```
+
+## If need, force reconcile to be faster
+
+```
+flux reconcile ks flux-system
+flux reconcile ks thiscluster
+```
+
+
+# Get access to ArgoCD UI
+
+```
+kubectl get secrets -n argocd argocd-initial-admin-secret -o jsonpath={.data.password} | base64 -d
+```
+
+Open your browser and point to https://argocd.172.17.0.90.nip.io/ using admin ( username ) and passowrd got above.
+
+
 # Cleanup
 
 ```
