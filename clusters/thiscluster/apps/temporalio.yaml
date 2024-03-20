@@ -2,6 +2,7 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: temporalio
+  namespace: argocd
 spec:
   destination:
     name: ''
