@@ -5,6 +5,7 @@ metadata:
   name: temporal
   namespace: flux-system
 spec:
+  timeout: 20m
   chart:
     spec:
       chart: temporal
@@ -33,5 +34,7 @@ spec:
     prometheus:
       enabled: false
     grafana:
+      enabled: false
+    elasticsearch:
       enabled: false
 
