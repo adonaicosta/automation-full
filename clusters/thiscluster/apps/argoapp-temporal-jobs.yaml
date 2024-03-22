@@ -1,0 +1,26 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: temporalio-jobs
+  namespace: argocd
+spec:
+  destination:
+    namespace: temporal
+    server: https://kubernetes.default.svc
+  project: default
+  source:
+    directory:
+      exclude: argoapp-cert-manager.yaml argoapp-temporal.yaml helmrelease-temporal.yaml
+        ingress-nginx-internal.yaml kustomization.yaml
+      include: helmrelease-temporal-jobs.yaml
+      jsonnet:
+        tlas:
+        - name: ""
+          value: ""
+    path: clusters/thiscluster/apps
+    repoURL: https://github.com/adonaicosta/automation-full
+    targetRevision: HEAD
+  syncPolicy:
+    automated: {}
+    syncOptions:
+    - CreateNamespace=true
