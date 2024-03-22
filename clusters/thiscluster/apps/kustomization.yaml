@@ -2,8 +2,8 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
 # VIA FLUX
-#- helmrelease-temporal.yaml
-#- helmrelease-temporal-jobs.yaml
+- helmrelease-temporal.yaml
+- helmrelease-temporal-jobs.yaml
 
 # VIA ARGOCD *** SO DEPOIS DE INSTALADO O ARGO ESSES ARTEFATOS PODEM SER APLICADOS
 #- argoapp-temporal.yaml
