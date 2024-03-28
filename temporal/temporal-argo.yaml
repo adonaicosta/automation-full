@@ -1,23 +1,24 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: temporal
+  name: temporalio
   namespace: argocd
 spec:
-  destination:
-    name: ''
-    namespace: temporal
-    server: 'https://kubernetes.default.svc'
-  source:
-    path: temporal
-    repoURL: 'https://github.com/adonaicosta/automation-full.git'
-    targetRevision: HEAD
-  sources: []
   project: default
+  source:
+    repoURL: 'https://go.temporal.io/helm-charts'
+    targetRevision: 0.36.0
+    helm:
+      parameters:
+        - name: cassandra.config.cluster_size
+          value: '1'
+    chart: temporal
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: temporalio
   syncPolicy:
-    automated:
-      prune: false
-      selfHeal: false
+    automated: {}
     syncOptions:
       - ServerSideApply=true
-      - PrunePropagationPolicy=background      
+      - CreateNamespace=true
+      - PrunePropagationPolicy=background        
