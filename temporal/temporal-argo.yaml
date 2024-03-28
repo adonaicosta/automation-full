@@ -1,0 +1,21 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: temporal
+  namespace: argocd
+spec:
+  destination:
+    name: ''
+    namespace: temporal
+    server: 'https://kubernetes.default.svc'
+  source:
+    path: temporal2
+    repoURL: 'https://github.com/adonaicosta/automation-full.git'
+    targetRevision: HEAD
+  sources: []
+  project: default
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: false
+    syncOptions: []
