@@ -9,7 +9,7 @@ spec:
     namespace: temporal
     server: 'https://kubernetes.default.svc'
   source:
-    path: temporal2
+    path: temporal
     repoURL: 'https://github.com/adonaicosta/automation-full.git'
     targetRevision: HEAD
   sources: []
